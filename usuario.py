@@ -131,6 +131,12 @@ class Usuario:
         """
 
         return cls.__total_usuarios # cls aqui equivale a escrever Usuario.__total_usuarios.
+
+    # ---- Métodos SET - escrita com validação ---------------------
+    # Permitem alterar atributos privados, mas com regras de negócio.
+    # __atributo nunca é alterado diretamente de fora - sempre pelo set.
+    # --------------------------------------------------------------
+
     def set_nome(self, novo_nome: str) -> None:
         """
         Atualiza o nome do usuário após validação mínima.
@@ -138,6 +144,7 @@ class Usuario:
         Args:
             novo_nome (str): Novo nome a ser definido.
         """
+
         # strip() remove espaços extras nas bordas antes de checar o tamanho
         if len(novo_nome.strip()) < 2:
             # Se inválido, informa e interrompe — não altera nada
@@ -154,6 +161,7 @@ class Usuario:
             novo_email (str): Novo e-mail a ser definido.
         """
         # Valida se o texto tem ao menos um '@' e um '.' (formato mínimo de e-mail)
+
         if "@" not in novo_email or "." not in novo_email:
             print("Erro: e-mail inválido.")
             return  # Interrompe sem alterar o atributo
@@ -171,6 +179,7 @@ class Usuario:
             senha_atual (str): Senha que o usuário já possui.
             nova_senha  (str): Nova senha desejada.
         """
+        
         # Reutiliza o método verificar_senha para checar a senha atual
         if not self.verificar_senha(senha_atual):
             print("Erro: senha atual incorreta.")
