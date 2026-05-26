@@ -43,7 +43,7 @@ class Usuario:
         self.__senha: str = senha                   # Senha - nunca vai ser retornada por get
 
         # Registra o momento exato da criação do obejto.
-        self.__data_cadastro: str = datetime.now().strftime("%d/%m/%y %H:%M")
+        self.__data_cadastro: str = datetime.now().strftime("%d/%m/%Y %H:%M")
 
         # Informa no console que o objeto foi criado
         print(f"[+] Usuário '{self.__nome}' criado em {self.__data_cadastro}.")
@@ -56,7 +56,7 @@ class Usuario:
         Executado automaticamente quando o objeto é destruído.
         """
 
-        print(f"[-] Usuário '{self.__nome}' removido do sistema.")
+        # print(f"[-] Usuário '{self.__nome}' removido do sistema.")
 
         Usuario.__total_usuarios -= 1
 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     print("=== Criando usuários ===")
     print("=" * 50)
  
-    # Construtor chamado duas vezes → dois objetos distintos na memória
+    # Construtor chamado duas vezes -> dois objetos distintos na memória
     u1 = Usuario("Ana Lima", "ana@email.com", "senha123")
     u2 = Usuario("Carlos Souza", "carlos@email.com", "abc456")
  
@@ -225,10 +225,10 @@ if __name__ == "__main__":
         print(f"Bloqueado pelo encapsulamento: {e}")
  
     print("\n=== Alterando dados via set ===")
-    u1.set_nome("Ana Costa")                # Válido → altera
-    u1.set_email("ana.costa@email.com")     # Válido → altera
-    u1.set_nome("A")                        # Inválido → mensagem de erro, sem alteração
-    u1.set_email("invalido")                # Inválido → mensagem de erro, sem alteração
+    u1.set_nome("Ana Costa")                # Válido -> altera
+    u1.set_email("ana.costa@email.com")     # Válido -> altera
+    u1.set_nome("A")                        # Inválido -> mensagem de erro, sem alteração
+    u1.set_email("invalido")                # Inválido -> mensagem de erro, sem alteração
  
     print(f"Nome atualizado: {u1.get_nome()}")
     print(f"Email atualizado: {u1.get_email()}")
