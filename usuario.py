@@ -56,7 +56,7 @@ class Usuario:
         Executado automaticamente quando o objeto é destruído.
         """
 
-        print(f"[-] Usuário '{self.__nome}' removido do sistema.")
+        # print(f"[-] Usuário '{self.__nome}' removido do sistema.")
 
         Usuario.__total_usuarios -= 1
 
