@@ -45,7 +45,6 @@ class Conta:
     def get_total_contas(cls) -> int:
         return cls.__total_contas
     
-
 # Métodos SET
     def set_limite(self, novo_limite: float) -> None:
         if novo_limite < 0:
@@ -75,17 +74,8 @@ class Conta:
             return
         self.__saldo -= valor
         print(f"Saque de R$ {valor} realizado. Novo saldo: R$ {self.__saldo}.")
-    def transferir(self, valor: float, conta_destino: 'Conta') -> None:
-        if valor <= 0:
-            print("Erro: O valor da transferência deve ser maior que zero.")
-            return
-        if valor > (self.__saldo + self.__limite):
-            print("Erro: Saldo e limite insuficiente para realizar a transferência.")
-            return
         self.__saldo -= valor
-        conta_destino.depositar(valor)
-        print(f"Transferência de R$ {valor} realizada para a conta do tipo '{conta_destino.get_tipo()}.' Novo saldo: R$ {self.__saldo}.")
-
+        
 # Blocos de demonstração
 if __name__ == "__main__":
     print("Iniciando o sistema de contas...\n")
@@ -108,11 +98,9 @@ print("\nTestando operações...")
 conta1.depositar(200)
 conta1.sacar(500)
 conta1.sacar(1000)
-conta1.transferir(300, conta2)
 print("\nDados da conta 1 após operações:")
 print(conta1)
-print(f"\nDados da conta 2 após receber transferência:")
-print(conta2)
 print("\nRemovendo uma conta...")
 del conta2
 print(f"Total de contas no sistema após remoção: {Conta.get_total_contas()}")
+
