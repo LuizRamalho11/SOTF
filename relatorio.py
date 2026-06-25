@@ -116,4 +116,5 @@ if __name__ == "__main__":
     # O mesmo relatório pode ser exportado para qualquer mecanismo compatível com a interface
     relatorio1.exportar(motor_pdf)
     relatorio1.exportar(motor_csv)
-    print(f"\nTotal de relatórios ativos no sistema: {Relatorio.get_total_gerados()}")           
+    print(f"\nTotal de relatórios ativos no sistema: {Relatorio.get_total_gerados()}")
+               
