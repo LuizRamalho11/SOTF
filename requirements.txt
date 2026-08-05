@@ -1,0 +1,6 @@
+# Interface gráfica da Etapa 3
+streamlit>=1.30
+
+# Desenho do grafo (o grafo e o BFS são implementação própria — o matplotlib
+# só renderiza a imagem)
+matplotlib>=3.7
