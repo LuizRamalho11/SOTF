@@ -9,8 +9,13 @@ class Usuario:
     A senha nunca é exposta - apenas verificada internamente.
     """
 
-    # ---- Atributo de Classe ------------------------------------------
+    # ---- Atributos de Classe ------------------------------------------
+    # Usuários VIVOS: sobe no construtor, desce no destrutor.
     __total_usuarios: int = 0
+
+    # Gerador de IDs: só sobe, nunca desce. Se o ID viesse do contador acima,
+    # remover um usuário faria o próximo nascer com um ID já em uso.
+    __ultimo_id: int = 0
 
     # ---- Construtor ----------------------------------------------------
     def __init__(self, nome: str, email: str, senha: str) -> None:
@@ -34,8 +39,14 @@ class Usuario:
         self.__senha: str = senha
 
         Usuario.__total_usuarios += 1
-        self.__id: int = Usuario.__total_usuarios
+        Usuario.__ultimo_id += 1
+        self.__id: int = Usuario.__ultimo_id
         self.__data_cadastro: str = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        # ---- Composição com Conta (Etapa 3) --------------------------
+        # Fecha a lacuna deixada na Etapa 2: um usuário possui N contas.
+        # --------------------------------------------------------------
+        self.__contas: list = []
 
         # Guarda de segurança: só existe se o construtor terminou com sucesso.
         # Usada pelo __del__ para nunca decrementar um objeto que nunca chegou
@@ -83,6 +94,26 @@ class Usuario:
         if "@" not in novo_email or "." not in novo_email:
             raise ValueError("Erro: e-mail inválido.")
         self.__email = novo_email.strip().lower()
+
+    # ---- Composição: um usuário possui N contas (Etapa 3) -------------------
+    @property
+    def contas(self) -> list:
+        """Contas do usuário — CÓPIA, para não alterarem a carteira por fora."""
+        return self.__contas.copy()
+
+    def adicionar_conta(self, conta) -> None:
+        """Vincula uma conta ao usuário, sem duplicar."""
+        if conta not in self.__contas:
+            self.__contas.append(conta)
+
+    def patrimonio_total(self) -> float:
+        """
+        Soma o saldo de todas as contas.
+
+        POLIMORFISMO: o usuário não sabe (nem precisa saber) se cada conta é
+        corrente ou poupança — chama `saldo` e cada objeto responde pelo seu tipo.
+        """
+        return sum(conta.saldo for conta in self.__contas)
 
     # ---- Senha: sem getter, só verificação e troca controlada --------------
     def verificar_senha(self, senha: str) -> bool:

@@ -1,29 +1,71 @@
 # 💳 SOTF — Sistema de Organização de Transações Financeiras
 
 > Projeto da disciplina de **Programação Orientada a Objetos** — UFPB 2026
-> **Etapa 2**: Métodos e variáveis de instância, encapsulamento com `@property`, herança, polimorfismo, interfaces e SOLID.
+> **Etapa 3**: diagrama de classes atualizado, recursão, tabelas hash, grafos, pesquisa em largura, Streamlit e revisão de SOLID.
 
 ---
 
 ## 📋 Sumário
 
 - [Sobre o Projeto](#-sobre-o-projeto)
+- [Como Executar](#️-como-executar)
 - [Estrutura de Arquivos](#-estrutura-de-arquivos)
 - [Diagrama de Classes](#-diagrama-de-classes)
-- [Visão Geral das Classes](#-visão-geral-das-classes)
-- [Conceitos de POO — Etapa 2](#-conceitos-de-poo--etapa-2)
+- [Etapa 3 — Estruturas de Dados](#-etapa-3--estruturas-de-dados)
+  - [Tabela Hash](#tabela-hash)
+  - [Grafo e Pesquisa em Largura](#grafo-e-pesquisa-em-largura)
+  - [Recursão](#recursão)
+  - [Interface com Streamlit](#interface-com-streamlit)
+- [Revisão de SOLID](#-revisão-de-solid-no-código-alterado)
+- [Etapas 1 e 2 (resumo)](#-etapas-1-e-2--resumo)
 - [Diário de Bordo](#-diário-de-bordo)
-- [Como Executar](#️-como-executar)
-- [Próximas Etapas](#-próximas-etapas)
+- [Uso de IA Generativa](#-uso-de-ia-generativa)
 - [Equipe](#-equipe)
 
 ---
 
 ## 📌 Sobre o Projeto
 
-O **SOTF** é um sistema de gerenciamento financeiro pessoal em Python. Usuários cadastram contas, registram transações, as classificam por categoria e acompanham o histórico — tudo com encapsulamento real: nenhum dado sensível é alterado sem passar por uma regra de negócio validada.
+O **SOTF** é um sistema de gerenciamento financeiro pessoal em Python. O usuário cadastra contas, registra transações, classifica tudo por categoria e acompanha o histórico — com encapsulamento real: nenhum dado sensível muda sem passar por uma regra de negócio validada.
 
-Na **Etapa 1** o foco foi classes, atributos de instância/classe e encapsulamento manual com `get_`/`set_`. Na **Etapa 2**, o projeto evoluiu para `@property`, hierarquias de herança com polimorfismo real e interfaces formais (`ABC`), aplicando os cinco princípios do SOLID.
+| Etapa | Foco |
+|---|---|
+| 1 | Classes, atributos de classe/instância, encapsulamento com `get`/`set`, construtores e destrutores |
+| 2 | `@property`, herança, polimorfismo, interfaces (`ABC`) e SOLID |
+| **3** | **Recursão, tabela hash, grafo, pesquisa em largura e interface Streamlit** |
+
+Na Etapa 3 as estruturas de dados foram **implementadas do zero** (`estruturas/`): a matéria cobra hash, grafo e BFS como conteúdo, então usar `dict` pronto ou `networkx` não atenderia. Bibliotecas externas entram apenas para desenhar a tela.
+
+---
+
+## ▶️ Como Executar
+
+Pré-requisito: Python 3.8+.
+
+```bash
+git clone https://github.com/LuizRamalho11/SOTF.git
+cd SOTF
+pip install -r requirements.txt
+
+# Interface gráfica (principal)
+streamlit run app.py
+```
+
+No app, clique em **“🎬 Carregar dados de exemplo”** para popular usuário, contas, categorias e transações de uma vez.
+
+Cada módulo também roda sozinho, com demonstração própria no terminal:
+
+```bash
+python estruturas/tabela_hash.py   # colisões, encadeamento e redimensionamento
+python estruturas/grafo.py         # BFS, níveis, caminho mínimo e componentes
+python categoria.py                # hierarquia e métodos recursivos
+python relatorio.py                # consolidação recursiva (categorias e períodos)
+python sistema.py                  # integração completa
+python usuario.py  |  python conta.py  |  python transacao.py
+```
+
+> No Windows, se os acentos e emojis saírem trocados no terminal, use
+> `set PYTHONIOENCODING=utf-8` antes de rodar. É só exibição — não afeta a lógica.
 
 ---
 
@@ -31,11 +73,17 @@ Na **Etapa 1** o foco foi classes, atributos de instância/classe e encapsulamen
 
 ```
 SOTF/
-├── usuario.py       # Usuario — autenticação e dados do usuário
-├── conta.py         # Conta (abstrata) + ContaCorrente + ContaPoupanca
-├── categoria.py     # Categoria — classificação de transações
-├── transacao.py     # Transacao (abstrata) + TransacaoReceita + TransacaoDespesa
-├── relatorio.py      # Relatorio + ExportadorInterface (PDF/CSV)
+├── app.py                 # Interface Streamlit (6 abas)
+├── sistema.py             # Fachada que integra domínio + estruturas
+├── usuario.py             # Usuario (possui N contas)
+├── conta.py               # Conta (abstrata) + ContaCorrente + ContaPoupanca
+├── categoria.py           # Categoria + hierarquia (árvore) + recursão
+├── transacao.py           # Transacao (abstrata) + Receita + Despesa
+├── relatorio.py           # Relatorio + NoPeriodo + interface de exportação
+├── estruturas/            # ← Etapa 3: estruturas implementadas do zero
+│   ├── tabela_hash.py     # TabelaHash (encadeamento separado)
+│   └── grafo.py           # Grafo (lista de adjacência) + BFS
+├── requirements.txt
 └── README.md
 ```
 
@@ -50,30 +98,22 @@ classDiagram
         -str nome
         -str email
         -str senha
-        -str data_cadastro
+        -list contas
         +verificar_senha(senha) bool
-        +set_senha(atual, nova)
-        +get_total_usuarios()$ int
-    }
-
-    class Categoria {
-        -int id
-        -str nome
-        -str cor
-        -str icone
-        +exibir()
-        +listar_padrao()$
-        +criar_a_partir_do_padrao(i)$ Categoria
+        +adicionar_conta(conta)
+        +patrimonio_total() float
     }
 
     class Conta {
         <<abstract>>
+        #int numero
         #float saldo
-        #date data_criacao
+        #list historico
         +tipo str*
+        +identificador str
         +depositar(valor)
         +sacar(valor)*
-        +get_total_contas()$ int
+        +registrar(transacao)
     }
     class ContaCorrente {
         -float limite
@@ -84,6 +124,7 @@ classDiagram
     }
     Conta <|-- ContaCorrente
     Conta <|-- ContaPoupanca
+    Usuario "1" *-- "N" Conta : possui
 
     class Transacao {
         <<abstract>>
@@ -93,7 +134,6 @@ classDiagram
         -datetime data
         +tipo str*
         +aplicar(conta)*
-        +get_total_transacoes()$ int
     }
     class TransacaoReceita {
         +aplicar(conta)
@@ -103,206 +143,262 @@ classDiagram
     }
     Transacao <|-- TransacaoReceita
     Transacao <|-- TransacaoDespesa
-    Transacao --> Categoria : N possui 1
+    Conta "1" o-- "N" Transacao : histórico
 
-    class ExportadorInterface {
-        <<interface>>
-        +exportar(conteudo)*
+    class Categoria {
+        -int id
+        -str nome
+        -str cor
+        -str icone
+        -Categoria pai
+        -list subcategorias
+        +adicionar_subcategoria(sub)
+        +profundidade() int
+        +contar_descendentes() int
+        +listar_arvore(nivel) list
     }
-    class ExportadorPDF {
-        +exportar(conteudo)
+    Categoria "1" o-- "N" Categoria : subcategorias
+    Transacao "N" --> "1" Categoria
+
+    class TabelaHash {
+        -int capacidade
+        -list buckets
+        -int colisoes
+        +inserir(chave, valor)
+        +buscar(chave) list
+        +remover(chave) bool
+        +distribuicao() list
     }
-    class ExportadorCSV {
-        +exportar(conteudo)
+
+    class Grafo {
+        -dict adjacencia
+        +adicionar_aresta(o, d)
+        +busca_em_largura(origem) dict
+        +caminho_mais_curto(o, d) list
+        +componentes_conexos() list
     }
-    ExportadorInterface <|.. ExportadorPDF
-    ExportadorInterface <|.. ExportadorCSV
+
+    class SistemaFinanceiro {
+        +registrar_transacao(t, conta)
+        +buscar_por_categoria(nome) list
+        +construir_grafo() Grafo
+        +carregar_exemplo()$ SistemaFinanceiro
+    }
+    SistemaFinanceiro --> Usuario
+    SistemaFinanceiro --> TabelaHash : indexa transações
+    SistemaFinanceiro --> Grafo : monta a rede
+    SistemaFinanceiro --> Categoria : raiz da árvore
+
+    class NoPeriodo {
+        -str rotulo
+        -list filhos
+        +adicionar(filho)
+        +contem(data) bool
+    }
 
     class Relatorio {
         -str tipo
         -date periodo_inicio
         -date periodo_fim
-        +gerar(conta, transacoes)
+        +consolidar_categoria(cat, indice) dict
+        +consolidar_periodo(no, transacoes) dict
         +exportar(exportador)
-        +get_total_gerados()$ int
     }
+    NoPeriodo "1" o-- "N" NoPeriodo : subperíodos
+    Relatorio ..> NoPeriodo : percorre
     Relatorio ..> Conta : usa
-    Relatorio ..> Transacao : usa
-    Relatorio ..> ExportadorInterface : usa
+    Relatorio ..> TabelaHash : consulta
+
+    class ExportadorInterface {
+        <<interface>>
+        +exportar(conteudo)*
+    }
+    class ExportadorPDF
+    class ExportadorCSV
+    class ExportadorTela
+    ExportadorInterface <|.. ExportadorPDF
+    ExportadorInterface <|.. ExportadorCSV
+    ExportadorInterface <|.. ExportadorTela
+    Relatorio ..> ExportadorInterface : injeta
 ```
 
-**Legenda:** `<|--` herança · `<|..` implementação de interface · `-->` associação · `..>` dependência · `#` protegido · `-` privado · `*` abstrato · `$` classmethod/static.
-
-`Usuario` ainda não está conectado às demais classes no código — essa integração (usuário → várias contas) é o primeiro item da [Etapa 3](#-próximas-etapas).
+**Legenda:** `<|--` herança · `<|..` implementa interface · `*--` composição · `o--` agregação · `..>` dependência · `*` abstrato · `$` método de classe
 
 ---
 
-## 🔎 Visão Geral das Classes
+## 🧱 Etapa 3 — Estruturas de Dados
 
-| Arquivo | Classe(s) | Responsabilidade | Destaques da Etapa 2 |
-|---|---|---|---|
-| `usuario.py` | `Usuario` | Credenciais e dados do usuário | `nome`/`email` viraram `@property` com validação; senha nunca é exposta |
-| `categoria.py` | `Categoria` | Classifica transações | `nome`/`cor`/`icone` viraram `@property`; guarda de construção corrigida |
-| `conta.py` | `Conta` (ABC), `ContaCorrente`, `ContaPoupanca` | Saldo e regras de saque | `Conta` é abstrata (interface parcial); cada subclasse sobrescreve `sacar()` |
-| `transacao.py` | `Transacao` (ABC), `TransacaoReceita`, `TransacaoDespesa` | Registro de movimentações | Nova hierarquia: cada subtipo sabe como `aplicar()` seu efeito numa conta |
-| `relatorio.py` | `Relatorio`, `ExportadorInterface`, `ExportadorPDF`, `ExportadorCSV` | Análise de período e exportação | Interface de exportação (DIP/ISP) — `Relatorio` não conhece PDF nem CSV |
+### Tabela Hash
 
-Todo atributo privado usa `__` (name mangling — `self.__saldo` vira `_Conta__saldo`), e todo contador de classe (`__total_*`) é acessado só por `@classmethod`.
+`estruturas/tabela_hash.py` — indexa **transações por nome de categoria**.
 
----
-
-## 🧠 Conceitos de POO — Etapa 2
-
-### 1. Encapsulamento com `@property`
-
-Os `get_`/`set_` manuais da Etapa 1 viraram propriedades — mesma proteção, sintaxe de atributo comum:
+- **Função hash polinomial base 31**: `h = (h * 31 + ord(c)) % capacidade`. O 31 é primo e ímpar, então espalha melhor que uma soma simples de caracteres.
+- **Colisões por encadeamento separado**: cada bucket guarda uma lista `[chave, [valores]]`; chaves diferentes que caem no mesmo bucket convivem ali.
+- **Redimensionamento automático**: passando de `0.7` de fator de carga, a capacidade dobra e **tudo é reinserido** — obrigatório, porque a função hash usa a capacidade no cálculo, então toda chave muda de lugar.
 
 ```python
-@property
-def limite(self) -> float:
-    return self.__limite
+indice = TabelaHash()
+indice.inserir("Alimentação", transacao)
+indice.buscar("Alimentação")     # O(1) médio, em vez de varrer tudo
+```
 
+Sem o índice, achar as transações de uma categoria custaria **O(n)**. O app mostra a diferença lado a lado: com 10 transações, a varredura linear faz 10 comparações; a hash faz 1 cálculo.
+
+### Grafo e Pesquisa em Largura
+
+`estruturas/grafo.py` — monta a **rede financeira**: `Usuário → Contas → Transações → Categorias`.
+
+Foi usada **lista de adjacência** em vez de matriz porque a rede é esparsa: cada transação liga uma conta a uma categoria, e a matriz gastaria O(V²) para guardar quase só zeros.
+
+A rede tem **ciclos de verdade** — quando duas contas gastam na mesma categoria, ela reconecta os dois ramos (no cenário de exemplo: 19 vértices e 22 arestas; uma árvore teria só 18).
+
+```python
+resultado = grafo.busca_em_largura("Usuário: Camila Ferreira")
+resultado["niveis"]         # distância em saltos até cada vértice
+grafo.caminho_mais_curto(origem, destino)
+```
+
+**Por que a fila importa:** o BFS visita em ondas — origem (nível 0), vizinhos (nível 1), vizinhos dos vizinhos (nível 2). A **fila FIFO** é o que garante essa ordem: quem entra primeiro sai primeiro, então nenhum vértice do nível 2 é processado antes de o nível 1 acabar. Trocar a fila por uma pilha transformaria o algoritmo em busca em **profundidade**.
+
+O conjunto `visitados` evita laço infinito nos ciclos, e é marcado **antes** de enfileirar — senão o mesmo vértice entraria duas vezes na fila.
+
+Como o BFS alcança cada vértice pela primeira vez sempre pelo trajeto mais curto, os predecessores que ele registra dão de graça o **caminho mínimo** em número de saltos.
+
+### Recursão
+
+Aplicada em **duas árvores diferentes**:
+
+**1. Árvore de categorias** (`Moradia → Aluguel, Luz`) — em `relatorio.py`:
+
+```python
+def consolidar_categoria(self, categoria, indice):
+    proprias = [t for t in indice.buscar(categoria.nome) if self.dentro_do_periodo(t.data)]
+    total_proprio = sum(t.valor for t in proprias)
+    filhos = [self.consolidar_categoria(sub, indice) for sub in categoria.subcategorias]
+    return {..., "total": total_proprio + sum(f["total"] for f in filhos)}
+```
+
+- **Caso base:** uma folha não tem filhas, o laço não roda e o total é só o próprio.
+- **Caso recursivo:** cada filha resolve a própria subárvore.
+- As transações vêm da **tabela hash**, então cada nó custa O(1) em vez de varrer a lista.
+
+**2. Árvore de períodos** (`Ano → Semestres → Meses`) — o ano nunca é somado direto: recebe o total dos semestres, que recebem o dos meses.
+
+A própria `Categoria` também usa recursão para operações de estrutura: `profundidade()`, `contar_descendentes()`, `listar_arvore()` e `eh_descendente_de()`.
+
+### Interface com Streamlit
+
+`app.py` — seis abas:
+
+| Aba | O que demonstra |
+|---|---|
+| 👤 Contas | Herança e polimorfismo: corrente e poupança lado a lado |
+| 💸 Transações | `aplicar()` polimórfico; erros de regra de negócio na tela |
+| ⚡ Tabela Hash | Buckets, colisões, fator de carga e hash × linear |
+| 🕸️ Grafo & BFS | Rede desenhada **por níveis do próprio BFS**, com caminho mínimo destacado |
+| 🌳 Categorias | Árvore e consolidação recursiva por subárvore |
+| 📊 Relatórios | Consolidação por períodos aninhados e exportação |
+
+O desenho do grafo usa **só matplotlib**: as coordenadas saem dos níveis calculados pelo BFS, ou seja, o mesmo algoritmo que percorre a rede também organiza o layout.
+
+Como o Streamlit **re-executa o arquivo inteiro a cada clique**, todos os objetos de domínio vivem em `st.session_state` — sem isso, cada interação recriaria usuário, contas e transações do zero.
+
+---
+
+## 🧠 Revisão de SOLID no código alterado
+
+| Princípio | Como aparece no código novo |
+|---|---|
+| **S**RP | `SistemaFinanceiro` só **coordena**: não calcula saldo (é da `Conta`), não valida transação (é da `Transacao`), não soma relatório (é do `Relatorio`). A `Categoria` conhece a própria árvore; **quem soma dinheiro é o `Relatorio`**. |
+| **O**CP | `ExportadorTela` foi criado em `app.py` **sem alterar uma linha** de `Relatorio`. Os três botões de exportação chamam o mesmo `relatorio.exportar()`. |
+| **L**SP | `ContaCorrente` e `ContaPoupanca` são intercambiáveis: `patrimonio_total()` chama `saldo` sem saber o tipo. Idem para `TransacaoReceita`/`TransacaoDespesa` em `aplicar()`. |
+| **I**SP | `ExportadorInterface` tem um único método — nenhum exportador é obrigado a implementar o que não usa. |
+| **D**IP | `Relatorio.gerar()` recebe `Conta` (abstrata) e `exportar()` recebe `ExportadorInterface`. As estruturas de dados ficam isoladas: a `Conta` não sabe o que é tabela hash, a `Categoria` não sabe o que é grafo. |
+
+---
+
+## 📚 Etapas 1 e 2 — resumo
+
+**Encapsulamento:** todo atributo privado usa `__` (*name mangling*: `self.__saldo` vira `_Conta__saldo`). Coleções são devolvidas como **cópia** (`historico`, `contas`, `subcategorias`), para ninguém alterar o estado por fora.
+
+**Properties (Etapa 2):** os `get_`/`set_` viraram `@property`, com validação no setter.
+
+```python
 @limite.setter
-def limite(self, novo_limite: float) -> None:
+def limite(self, novo_limite):
     if novo_limite < 0:
         raise ValueError("Limite não pode ser negativo.")
     self.__limite = novo_limite
-
-conta.limite = 1000.0   # chama o setter e valida
 ```
 
-Métodos que dependem de **mais de um argumento** (`set_senha(atual, nova)`, `set_periodo(inicio, fim)`) continuam como métodos comuns — uma property só aceita um valor do lado direito do `=`.
+Métodos que dependem de **dois argumentos** (`set_senha(atual, nova)`, `set_periodo(inicio, fim)`) continuam métodos comuns — uma property recebe um único valor.
 
-### 2. Herança
-
-`Conta` e `Transacao` viraram classes abstratas (`ABC`) com atributos e regras comuns; cada subclasse herda a estrutura e especializa o que muda:
-
-```python
-class Conta(ABC):
-    def depositar(self, valor): ...      # igual para todas as contas
-    @abstractmethod
-    def sacar(self, valor): ...          # cada conta decide como
-
-class ContaCorrente(Conta):
-    def sacar(self, valor):              # pode usar saldo + limite
-        if valor > (self._saldo + self.__limite): raise ValueError(...)
-
-class ContaPoupanca(Conta):
-    def sacar(self, valor):              # só pode usar o saldo
-        if valor > self._saldo: raise ValueError(...)
-```
-
-### 3. Polimorfismo
-
-O mesmo código chama `.sacar()` ou `.aplicar()` sem saber a subclasse concreta — cada objeto resolve seu próprio comportamento em tempo de execução:
-
-```python
-transacoes = [TransacaoDespesa(400, "Aluguel", cat), TransacaoReceita(3000, "Salário", cat)]
-for t in transacoes:
-    t.aplicar(conta)   # despesa saca, receita deposita — mesma chamada, efeitos opostos
-```
-
-### 4. Interfaces
-
-`ExportadorInterface` é uma interface pura (só métodos abstratos, sem estado) — `ExportadorPDF` e `ExportadorCSV` a implementam de forma intercambiável:
-
-```python
-class ExportadorInterface(ABC):
-    @abstractmethod
-    def exportar(self, conteudo: str) -> None: ...
-
-relatorio.exportar(ExportadorPDF())   # ou ExportadorCSV() — Relatorio não muda
-```
-
-### 5. SOLID
-
-| Princípio | Onde aparece |
-|---|---|
-| **S**RP | Cada classe tem uma responsabilidade: `Conta` cuida de saldo, `Relatorio` de análise, `ExportadorPDF`/`CSV` só exportam |
-| **O**CP | Novo tipo de conta, transação ou exportador = nova subclasse, sem tocar nas existentes |
-| **L**SP | `ContaCorrente`/`ContaPoupanca` e `TransacaoReceita`/`TransacaoDespesa` substituem suas classes-base sem quebrar nada |
-| **I**SP | `ExportadorInterface` tem um único método — clientes não dependem de operações que não usam |
-| **D**IP | `Relatorio.gerar()` depende de `Conta` (abstrata); `Relatorio.exportar()` depende de `ExportadorInterface`, nunca de PDF/CSV diretamente |
+**Herança e polimorfismo:** `Conta` e `Transacao` são abstratas (`ABC`); cada subclasse implementa o contrato à sua maneira — a poupança só saca o que tem, a corrente pode usar o limite.
 
 ---
 
 ## 🪵 Diário de Bordo
 
-### Herdado da Etapa 1 (resumo)
-- **Name mangling em `__atributo`** é sensível a digitação — um typo cria um atributo novo sem erro de sintaxe.
-- **`__del__` roda para todo objeto vivo ao fim do programa**, não só quando `del` é chamado manualmente — por isso ele nunca deve ter `print()` incondicional (ver abaixo).
-- **Saldo não tem setter direto** — só muda por `depositar()`/`sacar()`, que validam e mantêm a lógica de negócio coerente.
+### Etapa 3
 
-### Novos erros corrigidos na Etapa 2
+**1. IDs repetidos entre objetos vivos.**
+O ID vinha do mesmo contador que o destrutor decrementava. Criando A, B, C e apagando B, o próximo objeto nascia com o ID de C — **dois objetos vivos com o mesmo ID**. Passou a doer agora porque o ID identifica a transação na tabela hash e no grafo.
+*Solução:* separar os dois papéis — `__ultimo_id` só sobe (gera ID único) e `__total_*` continua subindo e descendo (conta objetos vivos). Aplicado em `Usuario`, `Categoria`, `Transacao` e `Conta`.
 
-**1. `__del__` decrementava contador de objetos que falharam ao construir.**
-`Categoria` e `Transacao` validavam os dados e só *depois* incrementavam `__total_*`. Se a validação lançasse `ValueError`, o objeto (já existente em memória antes do `__init__` rodar) ainda acionava `__del__`, decrementando um contador que nunca tinha sido somado — contagem ficava incorreta.
-**Solução:** guarda `self.__construido = True` como última linha do construtor; `__del__` só decrementa se `hasattr(self, "_Classe__construido")`. Aplicada em todas as classes com contador (`Usuario`, `Categoria`, `Conta`, `Transacao`, `Relatorio`).
+**2. A demonstração da tabela hash não mostrava nenhuma colisão.**
+A tabela era criada com capacidade 4 justamente para forçar colisões, mas ao passar de 0.7 de fator de carga ela dobrava sozinha, redistribuía as chaves e zerava o contador — o exemplo desfazia o que queria mostrar.
+*Solução:* tornar o limite do fator de carga configurável. A demo usa um limite alto para exibir o encadeamento e uma segunda tabela com o limite padrão para mostrar o redimensionamento acontecendo passo a passo.
 
-**2. `ContaCorrente.__init__` deixava o limite passar sem validação.**
-O construtor fazia `self.__limite = limite` diretamente, ignorando a regra de "limite não pode ser negativo" que só existia no `@limite.setter`. Dava para criar `ContaCorrente(limite=-500)` sem erro nenhum.
-**Solução:** o construtor agora atribui via `self.limite = limite`, passando pela property e reaproveitando a mesma validação.
+**3. Risco de import circular ao dar histórico à `Conta`.**
+`transacao.py` já importava `conta.py`; importar `Transacao` de volta fecharia o ciclo.
+*Solução:* `if TYPE_CHECKING:` com anotação em string (`"Transacao"`) — o import só existe para o verificador de tipos e não roda em tempo de execução.
 
-**3. Erros de validação eram só `print()` + `return` silencioso.**
-Setters como `set_nome`, `set_cor`, `sacar()` imprimiam uma mensagem e voltavam sem alterar nada — mas o chamador não tinha como saber, via código, que a operação falhou (só lendo o console). Isso mistura estilos com os construtores, que já usavam `raise`.
-**Solução:** todo setter/regra de negócio inválida agora levanta `ValueError`; o chamador decide se trata com `try/except` ou deixa propagar.
+**4. Recursão infinita se a hierarquia de categorias tivesse ciclo.**
+Nada impedia tornar “Finanças” subcategoria da própria neta; qualquer método recursivo rodaria para sempre.
+*Solução:* `adicionar_subcategoria()` recusa a operação quando o novo pai já é descendente — validado por `eh_descendente_de()`, que é recursivo.
 
-**4. Referência residual de variável de `for` atrasava o `__del__`.**
-No primeiro rascunho da demo de `transacao.py`, um `for t in (t1, t2): t.aplicar(conta)` deixava a variável `t` do laço apontando para `t2` mesmo depois do loop — Python não cria escopo de bloco para `for`. Ao rodar `del t2` logo em seguida, o contador de referências não zerava e `__del__` não disparava na hora esperada.
-**Solução:** trocado por chamadas explícitas (`t1.aplicar(conta)`, `t2.aplicar(conta)`), sem variável de laço sobrevivendo ao escopo.
+**5. Seleção obsoleta no seletor de destino do BFS.**
+As opções do destino eram “todos os vértices menos a origem”. Ao trocar a origem, o destino escolhido podia sumir da lista e o app ficava com uma seleção inválida.
+*Solução:* usar a mesma lista estável nos dois seletores e tratar explicitamente o caso origem = destino (0 saltos).
 
-**5. `__del__` com `print()` incondicional em `conta.py`/`relatorio.py`.**
-Mesma armadilha da Etapa 1 (item acima) tinha voltado nessas duas classes — o destrutor imprimia uma mensagem toda vez, inclusive para os objetos ainda vivos quando o programa termina.
-**Solução:** removidos; o destrutor só decrementa o contador, sem efeito colateral no console.
+**6. “Reiniciar sistema” deixava lixo na sessão.**
+O botão limpava só `session_state.sistema`, mas widgets com `key` continuavam guardando categorias e contas do sistema destruído.
+*Solução:* `st.session_state.clear()` e remoção da `key` do seletor de consolidação, para o Streamlit reidentificar o widget quando a árvore muda.
 
----
+**7. Ferramenta de teste com limitação própria.**
+O `AppTest` do Streamlit falhava ao clicar em seletores cujas opções são objetos quando a página também tem um `st.form`. Reproduzimos a falha num app genérico de 9 linhas: era limitação do harness, não do projeto.
+*Solução:* verificar a interface com o que o harness suporta e cobrir a lógica de cada opção por varredura direta — todos os pares de vértices no BFS, todas as chaves da hash e todas as categorias da árvore.
 
-## ▶️ Como Executar
+### Etapas 1 e 2 (resumo)
 
-Pré-requisito: Python 3.8+.
-
-```bash
-git clone https://github.com/LuizRamalho11/SOTF.git
-cd SOTF
-
-python usuario.py
-python categoria.py
-python conta.py
-python transacao.py
-python relatorio.py
-```
-
-Cada arquivo tem um bloco `if __name__ == "__main__":` com uma demonstração própria do módulo.
+- **`__del__` roda em todo objeto vivo ao fim do programa**, não só no `del` manual — por isso o destrutor não tem `print()`.
+- **Destrutor de objeto que falhou no construtor** decrementava contador nunca incrementado — resolvido com a guarda `self.__construido`.
+- **`set_saldo()` foi removido**: o saldo só muda por `depositar()`/`sacar()`, que validam e registram.
+- **Validação de saque** precisa considerar `saldo + limite`, não só o saldo.
+- **Variável de laço `for` sobrevive ao laço** em Python e adiava o `__del__`.
+- **Erros silenciosos**: setters que só imprimiam e retornavam passaram a `raise ValueError`.
 
 ---
 
-## 🚀 Próximas Etapas
+## 🤖 Uso de IA Generativa
 
-### Etapa 3 — Recursão, Tabelas Hash, Grafos, Busca em Largura, Streamlit
+Este projeto usou o **Claude (Anthropic)** como apoio, conforme exigido pelas regras da disciplina. A IA foi usada para:
 
-- [ ] Conectar `Usuario` às demais classes (um usuário possui N contas)
-- [ ] Interface visual com **Streamlit**
-- [ ] Tabela hash para busca rápida de transações por categoria
-- [ ] Grafo de categorias com visualização de relacionamentos
-- [ ] Pesquisa em largura no histórico financeiro
-- [ ] Recursão nos relatórios para consolidação de períodos aninhados
-- [ ] Revisão de SOLID no código alterado
+- documentar o código e escrever este README;
+- revisar o código em busca de falhas — foi assim que apareceram os itens 1, 3 e 4 do diário de bordo;
+- sugerir a estrutura das classes da Etapa 3 e da interface Streamlit.
 
-### Expansões futuras (além da disciplina)
-
-- [ ] Persistência com SQLite
-- [ ] Hash de senha com `bcrypt`
-- [ ] Dashboard com gráficos por categoria
+Toda a lógica foi revisada, executada e testada pelo grupo. As estruturas de dados (hash, grafo, BFS) foram implementadas do zero, sem bibliotecas prontas.
 
 ---
 
 ## 👥 Equipe
 
-| Integrante | Responsabilidade |
-|---|---|
-| Luiz Felipe Ramalho Reis | `usuario.py` + `categoria.py` |
-| Luy Koji Castelo Branco | `conta.py` + `relatorio.py` |
-| Gabriel José | `transacao.py` |
+| Integrante | Etapa 1 | Etapa 2 | Etapa 3 |
+|---|---|---|---|
+| Luiz Felipe Ramalho Reis | `usuario.py`, `categoria.py` | properties e validações | `estruturas/tabela_hash.py` + hierarquia de categorias |
+| Luy Koji Castelo Branco | `conta.py`, `relatorio.py` | herança e interfaces | `estruturas/grafo.py` (BFS) + recursão nos relatórios |
+| Gabriel José | `transacao.py` | polimorfismo | `app.py` (Streamlit) + `sistema.py` |
 
 ---
 

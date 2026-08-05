@@ -1,5 +1,11 @@
 from abc import ABC, abstractmethod
 from datetime import date
+from typing import TYPE_CHECKING
+
+# Importado só para a checagem de tipos. Em tempo de execução este bloco não
+# roda, o que evita import circular: transacao.py já importa conta.py.
+if TYPE_CHECKING:
+    from transacao import Transacao
 
 
 class Conta(ABC):
@@ -11,13 +17,28 @@ class Conta(ABC):
     obrigatório para as subclasses — cada tipo de conta saca de um jeito.
     """
 
+    # Contas VIVAS: sobe no construtor, desce no destrutor.
     __total_contas: int = 0
 
+    # Gerador de números de conta: só sobe, nunca desce. É o que identifica
+    # a conta como vértice do grafo, então precisa ser único de verdade.
+    __ultimo_numero: int = 0
+
     def __init__(self, saldo_inicial: float = 0.0) -> None:
+        if saldo_inicial < 0:
+            raise ValueError("O saldo inicial não pode ser negativo.")
+
         Conta.__total_contas += 1
+        Conta.__ultimo_numero += 1
+
         # Atributos protegidos (_) para que as subclasses possam acessá-los.
+        self._numero: int = Conta.__ultimo_numero
         self._saldo: float = saldo_inicial
         self._data_criacao: date = date.today()
+
+        # Histórico de transações (Etapa 3): sem ele não há o que indexar
+        # na tabela hash nem o que percorrer no grafo.
+        self._historico: list = []
 
         # Guarda de segurança: só existe se o construtor terminou sem erro.
         self.__construido: bool = True
@@ -29,12 +50,33 @@ class Conta(ABC):
 
     # ---- Encapsulamento com properties -----------------------------------
     @property
+    def numero(self) -> int:
+        return self._numero
+
+    @property
     def saldo(self) -> float:
         return self._saldo
 
     @property
     def data_criacao(self) -> date:
         return self._data_criacao
+
+    @property
+    def historico(self) -> list:
+        """
+        Transações já registradas — CÓPIA, para que ninguém insira ou apague
+        movimentações por fora das regras de negócio (lição da Etapa 1).
+        """
+        return self._historico.copy()
+
+    @property
+    def identificador(self) -> str:
+        """Rótulo curto usado como vértice do grafo. Ex.: 'Conta:#1 Corrente'."""
+        return f"Conta:#{self._numero} {self.tipo.replace('Conta ', '')}"
+
+    def registrar(self, transacao: "Transacao") -> None:
+        """Guarda a transação no histórico desta conta."""
+        self._historico.append(transacao)
 
     @property
     @abstractmethod
@@ -58,8 +100,9 @@ class Conta(ABC):
         """Regra de saque específica de cada tipo de conta."""
 
     def __str__(self) -> str:
-        return (f"Tipo da conta: {self.tipo}\n"
+        return (f"Tipo da conta: {self.tipo} (nº {self._numero})\n"
                 f"Saldo: R${self.saldo:.2f}\n"
+                f"Transações registradas: {len(self._historico)}\n"
                 f"Data de criação: {self.data_criacao.strftime('%d/%m/%Y')}")
 
 

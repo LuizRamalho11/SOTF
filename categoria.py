@@ -10,7 +10,13 @@ class Categoria:
     """
 
     # ---- Atributos de Classe ------------------------------------------
+    # Categorias VIVAS: sobe no construtor, desce no destrutor.
     __total_categorias: int = 0
+
+    # Gerador de IDs: só sobe, nunca desce. Precisa ser separado do contador
+    # acima — se o ID viesse dele, apagar uma categoria faria a próxima
+    # nascer com um ID já em uso por outra que continua viva.
+    __ultimo_id: int = 0
 
     __categorias_padrao: list = [
         {"nome": "Alimentação",  "cor": "#FF6B6B", "icone": "🍔"},
@@ -41,7 +47,15 @@ class Categoria:
         self.icone = icone
 
         Categoria.__total_categorias += 1
-        self.__id: int = Categoria.__total_categorias
+        Categoria.__ultimo_id += 1
+        self.__id: int = Categoria.__ultimo_id
+
+        # ---- Hierarquia (Etapa 3) -------------------------------------
+        # Uma categoria pode conter subcategorias: Moradia -> Aluguel, Luz.
+        # É essa estrutura de árvore que torna a recursão possível.
+        # ---------------------------------------------------------------
+        self.__pai: "Categoria | None" = None
+        self.__subcategorias: list = []
 
         # Guarda de segurança: só existe se o construtor terminou com sucesso.
         # Sem ela, um __init__ que falhasse na validação ainda acionaria o
@@ -101,6 +115,105 @@ class Categoria:
         if not novo_icone.strip():
             raise ValueError("Erro: o ícone não pode ser vazio.")
         self.__icone = novo_icone.strip()
+
+    # ---- Hierarquia de categorias (Etapa 3) ----------------------------------
+    @property
+    def pai(self) -> "Categoria | None":
+        """Categoria que contém esta. None se for raiz."""
+        return self.__pai
+
+    @property
+    def subcategorias(self) -> list:
+        """Filhas diretas — cópia, para ninguém alterar a árvore por fora."""
+        return self.__subcategorias.copy()
+
+    def adicionar_subcategoria(self, subcategoria: "Categoria") -> None:
+        """
+        Torna outra categoria filha desta.
+
+        As validações impedem montar uma árvore inválida: uma categoria não
+        pode conter a si mesma nem um ancestral seu (isso criaria um ciclo,
+        e qualquer método recursivo entraria em laço infinito).
+        """
+        if subcategoria is self:
+            raise ValueError("Uma categoria não pode ser subcategoria de si mesma.")
+        if self.eh_descendente_de(subcategoria):
+            raise ValueError(
+                f"'{subcategoria.nome}' é ancestral de '{self.nome}' — isso criaria um ciclo."
+            )
+        if subcategoria in self.__subcategorias:
+            return  # já é filha, nada a fazer
+
+        # Se já tinha outro pai, desliga do anterior antes de religar.
+        if subcategoria.pai is not None:
+            subcategoria.pai.remover_subcategoria(subcategoria)
+
+        self.__subcategorias.append(subcategoria)
+        subcategoria.__pai = self
+
+    def remover_subcategoria(self, subcategoria: "Categoria") -> bool:
+        """Desliga uma filha desta categoria. True se removeu."""
+        if subcategoria in self.__subcategorias:
+            self.__subcategorias.remove(subcategoria)
+            subcategoria.__pai = None
+            return True
+        return False
+
+    def eh_folha(self) -> bool:
+        """True se não tem subcategorias."""
+        return len(self.__subcategorias) == 0
+
+    def eh_descendente_de(self, possivel_ancestral: "Categoria") -> bool:
+        """
+        RECURSÃO: sobe a árvore pelo pai até achar o ancestral ou a raiz.
+
+        Caso base   : não há pai (chegou na raiz) -> False.
+        Caso recursivo: pergunta a mesma coisa ao pai.
+        """
+        if self.__pai is None:
+            return False
+        if self.__pai is possivel_ancestral:
+            return True
+        return self.__pai.eh_descendente_de(possivel_ancestral)
+
+    def profundidade(self) -> int:
+        """
+        RECURSÃO: altura da subárvore (uma folha tem profundidade 0).
+
+        Caso base   : sem filhas -> 0.
+        Caso recursivo: 1 + a maior profundidade entre as filhas.
+        """
+        if self.eh_folha():
+            return 0
+        return 1 + max(sub.profundidade() for sub in self.__subcategorias)
+
+    def contar_descendentes(self) -> int:
+        """
+        RECURSÃO: quantas categorias existem abaixo desta, em todos os níveis.
+
+        Caso base   : sem filhas -> 0.
+        Caso recursivo: para cada filha, conta ela (1) + os descendentes dela.
+        """
+        total = 0
+        for subcategoria in self.__subcategorias:
+            total += 1 + subcategoria.contar_descendentes()
+        return total
+
+    def listar_arvore(self, nivel: int = 0) -> list:
+        """
+        RECURSÃO: devolve a árvore achatada em linhas (nivel, categoria),
+        já na ordem de leitura. Usada pelo terminal e pela interface Streamlit.
+        """
+        linhas = [(nivel, self)]
+        for subcategoria in self.__subcategorias:
+            # Cada filha devolve a própria subárvore, um nível mais fundo.
+            linhas.extend(subcategoria.listar_arvore(nivel + 1))
+        return linhas
+
+    def exibir_arvore(self, nivel: int = 0) -> None:
+        """Imprime a hierarquia indentada, reaproveitando listar_arvore()."""
+        for profundidade_linha, categoria in self.listar_arvore(nivel):
+            print(f"{'    ' * profundidade_linha}{categoria.icone} {categoria.nome}")
 
     # ---- Métodos de negócio -------------------------------------------------
     def exibir(self) -> None:
@@ -212,3 +325,40 @@ if __name__ == "__main__":
     padrao = Categoria.get_categorias_padrao()
     print(f"Total de categorias padrão: {len(padrao)}")
     print(f"Primeira categoria padrão : {padrao[0]}")
+
+    # ---- Hierarquia e recursão (Etapa 3) ------------------------------------
+    print("\n=== Montando a hierarquia de categorias ===")
+    financas = Categoria("Finanças", "#FFFFFF", "💰")
+    moradia = Categoria("Moradia", "#FFEAA7", "🏠")
+    alimentacao = Categoria("Alimentação", "#FF6B6B", "🍔")
+
+    financas.adicionar_subcategoria(moradia)
+    financas.adicionar_subcategoria(alimentacao)
+
+    aluguel = Categoria("Aluguel", "#FFD700", "🔑")
+    luz = Categoria("Luz", "#FFA500", "💡")
+    moradia.adicionar_subcategoria(aluguel)
+    moradia.adicionar_subcategoria(luz)
+
+    mercado = Categoria("Mercado", "#FF8C69", "🛒")
+    alimentacao.adicionar_subcategoria(mercado)
+
+    print("\nÁrvore montada (percurso recursivo):")
+    financas.exibir_arvore()
+
+    print("\n=== Consultas recursivas ===")
+    print(f"Profundidade da árvore    : {financas.profundidade()}")
+    print(f"Descendentes de 'Finanças': {financas.contar_descendentes()}")
+    print(f"Descendentes de 'Moradia' : {moradia.contar_descendentes()}")
+    print(f"'Aluguel' é folha?        : {aluguel.eh_folha()}")
+    print(f"Pai de 'Aluguel'          : {aluguel.pai.nome}")
+    print(f"'Aluguel' descende de 'Finanças'? {aluguel.eh_descendente_de(financas)}")
+    print(f"'Mercado' descende de 'Moradia'?  {mercado.eh_descendente_de(moradia)}")
+
+    print("\n=== A árvore se protege de ciclos ===")
+    try:
+        # Tornar 'Finanças' filha da própria neta criaria um ciclo e faria
+        # qualquer método recursivo rodar para sempre.
+        aluguel.adicionar_subcategoria(financas)
+    except ValueError as e:
+        print(f"Bloqueado: {e}")

@@ -15,7 +15,13 @@ class Transacao(ABC):
     TransacaoDespesa implementam de formas diferentes (polimorfismo).
     """
 
+    # Transações VIVAS: sobe no construtor, desce no destrutor.
     __total_transacoes: int = 0
+
+    # Gerador de IDs: só sobe, nunca desce. Se o ID viesse do contador acima,
+    # apagar uma transação faria a próxima nascer com um ID já em uso — e o
+    # ID é o que identifica a transação na tabela hash e no grafo.
+    __ultimo_id: int = 0
 
     def __init__(self, valor: float, descricao: str, categoria: Categoria) -> None:
         """
@@ -28,7 +34,8 @@ class Transacao(ABC):
             raise ValueError("Erro: o valor da transação deve ser positivo.")
 
         Transacao.__total_transacoes += 1
-        self.__id: int = Transacao.__total_transacoes
+        Transacao.__ultimo_id += 1
+        self.__id: int = Transacao.__ultimo_id
         self._valor: float = valor
         self._descricao: str = descricao.strip()
         self._data: datetime = datetime.now()
