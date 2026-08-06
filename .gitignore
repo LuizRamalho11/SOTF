@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# Banco SQLite local (Etapa 4) — dados de cada usuário, não deve ir pro repositório.
+*.db
+*.db-wal
+*.db-shm

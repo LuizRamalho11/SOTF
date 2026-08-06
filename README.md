@@ -2,6 +2,7 @@
 
 > Projeto da disciplina de **Programação Orientada a Objetos** — UFPB 2026
 > **Etapa 3**: diagrama de classes atualizado, recursão, tabelas hash, grafos, pesquisa em largura, Streamlit e revisão de SOLID.
+> **Etapa 4**: persistência em SQLite e login de verdade, com senha em hash.
 
 ---
 
@@ -16,6 +17,10 @@
   - [Grafo e Pesquisa em Largura](#grafo-e-pesquisa-em-largura)
   - [Recursão](#recursão)
   - [Interface com Streamlit](#interface-com-streamlit)
+- [Etapa 4 — Persistência e Login](#-etapa-4--persistência-e-login)
+  - [Banco de Dados](#banco-de-dados)
+  - [Senha em Hash](#senha-em-hash)
+  - [Salvar e Carregar Estado](#salvar-e-carregar-estado)
 - [Revisão de SOLID](#-revisão-de-solid-no-código-alterado)
 - [Etapas 1 e 2 (resumo)](#-etapas-1-e-2--resumo)
 - [Diário de Bordo](#-diário-de-bordo)
@@ -32,9 +37,12 @@ O **SOTF** é um sistema de gerenciamento financeiro pessoal em Python. O usuár
 |---|---|
 | 1 | Classes, atributos de classe/instância, encapsulamento com `get`/`set`, construtores e destrutores |
 | 2 | `@property`, herança, polimorfismo, interfaces (`ABC`) e SOLID |
-| **3** | **Recursão, tabela hash, grafo, pesquisa em largura e interface Streamlit** |
+| 3 | Recursão, tabela hash, grafo, pesquisa em largura e interface Streamlit |
+| **4** | **Persistência em SQLite e login com senha em hash** |
 
 Na Etapa 3 as estruturas de dados foram **implementadas do zero** (`estruturas/`): a matéria cobra hash, grafo e BFS como conteúdo, então usar `dict` pronto ou `networkx` não atenderia. Bibliotecas externas entram apenas para desenhar a tela.
+
+Na Etapa 4, `sqlite3` é biblioteca padrão do Python — não é o tipo de estrutura que a matéria pede para implementar do zero (ao contrário de hash/grafo), então usá-la pronta é o caminho certo.
 
 ---
 
@@ -51,7 +59,11 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-No app, clique em **“🎬 Carregar dados de exemplo”** para popular usuário, contas, categorias e transações de uma vez.
+Na primeira execução, o app cria sozinho o arquivo `sotf.db` (SQLite) na raiz do projeto — não precisa de nenhum setup manual de banco. Na barra lateral:
+
+- **“🎬 Carregar dados de exemplo”** — modo demonstração, popula usuário/contas/categorias/transações na hora, mas **não fica salvo** (some ao sair);
+- **aba “Criar conta”** — cadastro de verdade, com senha (mínimo 6 caracteres) guardada como hash no banco;
+- **aba “Entrar”** — login recarrega exatamente o que esse usuário tinha salvo da última vez.
 
 Cada módulo também roda sozinho, com demonstração própria no terminal:
 
@@ -83,6 +95,8 @@ SOTF/
 ├── estruturas/            # ← Etapa 3: estruturas implementadas do zero
 │   ├── tabela_hash.py     # TabelaHash (encadeamento separado)
 │   └── grafo.py           # Grafo (lista de adjacência) + BFS
+├── banco.py               # ← Etapa 4: persistência SQLite + cadastro/login
+├── sotf.db                # Criado ao rodar — ignorado pelo git (dados de cada um)
 ├── requirements.txt
 └── README.md
 ```
@@ -97,11 +111,13 @@ classDiagram
         -int id
         -str nome
         -str email
-        -str senha
+        -str hash_senha
+        -bytes salt
         -list contas
         +verificar_senha(senha) bool
         +adicionar_conta(conta)
         +patrimonio_total() float
+        +reconstruir(nome, email, hash, salt)$ Usuario
     }
 
     class Conta {
@@ -180,6 +196,7 @@ classDiagram
 
     class SistemaFinanceiro {
         +registrar_transacao(t, conta)
+        +reidratar_transacao(t, conta)
         +buscar_por_categoria(nome) list
         +construir_grafo() Grafo
         +carregar_exemplo()$ SistemaFinanceiro
@@ -188,6 +205,17 @@ classDiagram
     SistemaFinanceiro --> TabelaHash : indexa transações
     SistemaFinanceiro --> Grafo : monta a rede
     SistemaFinanceiro --> Categoria : raiz da árvore
+
+    class banco {
+        <<módulo>>
+        +conectar(caminho) Connection
+        +cadastrar(conexao, nome, email, senha)
+        +autenticar(conexao, email, senha)
+        +salvar_estado(conexao, id, sistema)
+        +carregar_estado(conexao, id, usuario) SistemaFinanceiro
+    }
+    banco ..> SistemaFinanceiro : monta/lê
+    banco ..> Usuario : autentica
 
     class NoPeriodo {
         -str rotulo
@@ -305,6 +333,45 @@ Como o Streamlit **re-executa o arquivo inteiro a cada clique**, todos os objeto
 
 ---
 
+## 🔐 Etapa 4 — Persistência e Login
+
+Até a Etapa 3, "criar um usuário" só existia enquanto a aba do navegador ficava aberta — fechou, sumiu tudo. `banco.py` resolve isso com SQLite, e junto veio um login de verdade (antes, qualquer nome/e-mail digitado virava um usuário novo do zero, sem senha checada contra nada).
+
+Como `SistemaFinanceiro` é a fachada que integra domínio + estruturas de dados, `banco.py` é a fachada que integra domínio + disco: é o **único** módulo do projeto que importa `sqlite3`. Nenhuma classe de domínio (`Usuario`, `Conta`, `Categoria`, `Transacao`) sabe que um banco existe — a dependência corre num sentido só, de `banco.py` para elas.
+
+### Banco de Dados
+
+Quatro tabelas, uma por classe de domínio que precisa sobreviver entre sessões: `usuarios`, `contas`, `categorias` (com `pai_id` apontando pra outra linha da própria tabela — a árvore de categorias, achatada) e `transacoes`. Todas as três últimas têm `ON DELETE CASCADE`: apagar um usuário apaga as contas, que apagam as transações, sem precisar de código Python pra isso.
+
+```python
+conexao = banco.conectar()          # cria sotf.db e as tabelas na primeira vez
+id_usuario, usuario = banco.cadastrar(conexao, nome, email, senha)
+sistema = SistemaFinanceiro(usuario)
+...
+banco.salvar_estado(conexao, id_usuario, sistema)
+```
+
+### Senha em Hash
+
+A senha em texto puro **nunca chega a existir fora do formulário de login**. `Usuario` passou a guardar só `PBKDF2-HMAC-SHA256` (100 mil iterações, salt aleatório de 16 bytes por usuário — `hashlib` e `os`, biblioteca padrão) em vez da senha crua:
+
+```python
+self.__salt = os.urandom(16)
+self.__hash_senha = Usuario.__gerar_hash(senha, self.__salt)
+```
+
+`verificar_senha()` recalcula o hash da senha digitada e compara — a senha original nunca precisa ser lida de volta. Isso criou um problema específico: como recarregar um `Usuario` do banco sem ter a senha em texto puro pra passar no construtor (que a exige, para validar o tamanho mínimo)? A solução foi um classmethod `Usuario.reconstruir()`, que usa uma senha descartável só para satisfazer essa validação e, **de dentro da própria classe** (sem quebrar o encapsulamento de fora), sobrescreve o hash e o salt pelos valores vindos do SQLite.
+
+### Salvar e Carregar Estado
+
+`salvar_estado()` usa **substituição total**: apaga tudo que o usuário tinha salvo e regrava a partir do estado atual em memória. Para o volume de dados de um sistema pessoal isso é barato, e evita sincronizar incrementalmente os IDs dos objetos Python (que resetam a cada execução, via os contadores de classe da Etapa 1) com as chaves primárias do banco (que não resetam nunca).
+
+`carregar_estado()` faz o caminho inverso, na ordem que o resto do projeto já usa para árvores — **recursivamente**: monta primeiro as categorias sem pai, depois suas filhas, depois as netas, na mesma lógica de `listar_arvore()`. As contas nascem com `saldo_inicial` igual ao saldo já salvo, e as transações entram no histórico via `sistema.reidratar_transacao()` — uma versão de `registrar_transacao()` que **não** chama `transacao.aplicar(conta)`, porque o saldo salvo já é o resultado de aplicar todas elas; reaplicar duplicaria o valor.
+
+O botão **"🎬 Carregar dados de exemplo"** continua existindo à parte, como modo demonstração — não passa pelo banco, então nada ali fica salvo.
+
+---
+
 ## 🧠 Revisão de SOLID no código alterado
 
 | Princípio | Como aparece no código novo |
@@ -313,7 +380,7 @@ Como o Streamlit **re-executa o arquivo inteiro a cada clique**, todos os objeto
 | **O**CP | `ExportadorTela` foi criado em `app.py` **sem alterar uma linha** de `Relatorio`. Os três botões de exportação chamam o mesmo `relatorio.exportar()`. |
 | **L**SP | `ContaCorrente` e `ContaPoupanca` são intercambiáveis: `patrimonio_total()` chama `saldo` sem saber o tipo. Idem para `TransacaoReceita`/`TransacaoDespesa` em `aplicar()`. |
 | **I**SP | `ExportadorInterface` tem um único método — nenhum exportador é obrigado a implementar o que não usa. |
-| **D**IP | `Relatorio.gerar()` recebe `Conta` (abstrata) e `exportar()` recebe `ExportadorInterface`. As estruturas de dados ficam isoladas: a `Conta` não sabe o que é tabela hash, a `Categoria` não sabe o que é grafo. |
+| **D**IP | `Relatorio.gerar()` recebe `Conta` (abstrata) e `exportar()` recebe `ExportadorInterface`. As estruturas de dados ficam isoladas: a `Conta` não sabe o que é tabela hash, a `Categoria` não sabe o que é grafo. Na Etapa 4, o mesmo padrão se repete: `banco.py` depende de `Usuario`/`Conta`/`Categoria`/`Transacao`, mas nenhuma delas depende de `banco.py` — a persistência é um detalhe de fora, trocável, sem tocar o domínio. |
 
 ---
 
@@ -369,6 +436,20 @@ O botão limpava só `session_state.sistema`, mas widgets com `key` continuavam 
 O `AppTest` do Streamlit falhava ao clicar em seletores cujas opções são objetos quando a página também tem um `st.form`. Reproduzimos a falha num app genérico de 9 linhas: era limitação do harness, não do projeto.
 *Solução:* verificar a interface com o que o harness suporta e cobrir a lógica de cada opção por varredura direta — todos os pares de vértices no BFS, todas as chaves da hash e todas as categorias da árvore.
 
+### Etapa 4
+
+**1. Reconstruir um usuário sem senha em texto puro.**
+`Usuario.__init__` exige a senha crua para validar o tamanho mínimo, mas a senha crua nunca é salva — só o hash chega ao banco. Sem ela, não dava para chamar o construtor normal ao carregar um login.
+*Solução:* `Usuario.reconstruir()`, um classmethod que passa uma senha descartável só para validar, e então sobrescreve hash e salt de dentro da própria classe (sem name mangling vindo de fora — continua sendo o próprio `Usuario` fazendo isso).
+
+**2. Reaplicar uma transação ao carregar do banco duplicava o saldo.**
+`registrar_transacao()` sempre chama `transacao.aplicar(conta)` antes de guardar no histórico. Ao carregar do banco, a conta já nasce com o saldo final salvo — aplicar de novo cada transação salva dobraria o saldo.
+*Solução:* `SistemaFinanceiro.reidratar_transacao()`, que faz só os dois últimos passos (histórico + índice hash), sem `aplicar()`.
+
+**3. IDs dos objetos Python não são estáveis entre execuções.**
+`Conta.numero` e `Transacao.id` vêm de contadores de classe (Etapa 1) que resetam a cada `streamlit run`. Usá-los como chave primária no banco faria duas contas de sessões diferentes colidirem no mesmo `numero`.
+*Solução:* o banco tem suas próprias chaves primárias (`AUTOINCREMENT`), independentes dos IDs em memória. Ao carregar, os objetos nascem com IDs novos (únicos dentro do processo, que é tudo que o grafo e a hash da Etapa 3 precisam) e o mapeamento com o banco vive só durante o carregamento, num dicionário local.
+
 ### Etapas 1 e 2 (resumo)
 
 - **`__del__` roda em todo objeto vivo ao fim do programa**, não só no `del` manual — por isso o destrutor não tem `print()`.
@@ -386,9 +467,10 @@ Este projeto usou o **Claude (Anthropic)** como apoio, conforme exigido pelas re
 
 - documentar o código e escrever este README;
 - revisar o código em busca de falhas — foi assim que apareceram os itens 1, 3 e 4 do diário de bordo;
-- sugerir a estrutura das classes da Etapa 3 e da interface Streamlit.
+- sugerir a estrutura das classes da Etapa 3 e da interface Streamlit;
+- montar a camada de persistência da Etapa 4 (`banco.py`, hash de senha em `usuario.py`, telas de login/cadastro em `app.py`).
 
-Toda a lógica foi revisada, executada e testada pelo grupo. As estruturas de dados (hash, grafo, BFS) foram implementadas do zero, sem bibliotecas prontas.
+Toda a lógica foi revisada, executada e testada pelo grupo. As estruturas de dados (hash, grafo, BFS) foram implementadas do zero, sem bibliotecas prontas; a persistência usa `sqlite3` da biblioteca padrão.
 
 ---
 

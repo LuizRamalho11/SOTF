@@ -24,7 +24,7 @@ class Conta(ABC):
     # a conta como vértice do grafo, então precisa ser único de verdade.
     __ultimo_numero: int = 0
 
-    def __init__(self, saldo_inicial: float = 0.0) -> None:
+    def __init__(self, saldo_inicial: float = 0.0, data_criacao: date = None) -> None:
         if saldo_inicial < 0:
             raise ValueError("O saldo inicial não pode ser negativo.")
 
@@ -34,7 +34,9 @@ class Conta(ABC):
         # Atributos protegidos (_) para que as subclasses possam acessá-los.
         self._numero: int = Conta.__ultimo_numero
         self._saldo: float = saldo_inicial
-        self._data_criacao: date = date.today()
+        # `data_criacao` só é passada por `banco.carregar_estado()`, para a
+        # conta recarregada do banco manter a data original em vez de "hoje".
+        self._data_criacao: date = data_criacao or date.today()
 
         # Histórico de transações (Etapa 3): sem ele não há o que indexar
         # na tabela hash nem o que percorrer no grafo.
@@ -109,8 +111,9 @@ class Conta(ABC):
 class ContaCorrente(Conta):
     """Conta com limite de cheque especial além do saldo."""
 
-    def __init__(self, limite: float = 0.0, saldo_inicial: float = 0.0) -> None:
-        super().__init__(saldo_inicial)
+    def __init__(self, limite: float = 0.0, saldo_inicial: float = 0.0,
+                 data_criacao: date = None) -> None:
+        super().__init__(saldo_inicial, data_criacao)
         # Passa pela property abaixo — garante a mesma validação usada
         # em qualquer alteração posterior do limite.
         self.limite = limite
@@ -145,8 +148,8 @@ class ContaCorrente(Conta):
 class ContaPoupanca(Conta):
     """Conta sem limite de crédito — só pode sacar o que tem de saldo."""
 
-    def __init__(self, saldo_inicial: float = 0.0) -> None:
-        super().__init__(saldo_inicial)
+    def __init__(self, saldo_inicial: float = 0.0, data_criacao: date = None) -> None:
+        super().__init__(saldo_inicial, data_criacao)
 
     @property
     def tipo(self) -> str:
