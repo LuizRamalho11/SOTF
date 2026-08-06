@@ -23,12 +23,16 @@ class Transacao(ABC):
     # ID é o que identifica a transação na tabela hash e no grafo.
     __ultimo_id: int = 0
 
-    def __init__(self, valor: float, descricao: str, categoria: Categoria) -> None:
+    def __init__(self, valor: float, descricao: str, categoria: Categoria,
+                 data: datetime = None) -> None:
         """
         Args:
             valor      (float)    : Valor da transação (deve ser positivo).
             descricao  (str)      : Descrição resumida da transação.
             categoria  (Categoria): Categoria associada à transação.
+            data       (datetime) : Só usada por `banco.carregar_estado()`,
+                                     para a transação recarregada do banco
+                                     manter a data original em vez de "agora".
         """
         if valor <= 0:
             raise ValueError("Erro: o valor da transação deve ser positivo.")
@@ -38,7 +42,7 @@ class Transacao(ABC):
         self.__id: int = Transacao.__ultimo_id
         self._valor: float = valor
         self._descricao: str = descricao.strip()
-        self._data: datetime = datetime.now()
+        self._data: datetime = data or datetime.now()
         self._categoria: Categoria = categoria
 
         # Guarda de segurança: só existe se o construtor terminou sem erro.

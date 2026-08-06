@@ -1,3 +1,5 @@
+import hashlib
+import os
 from datetime import datetime
 
 
@@ -7,6 +9,10 @@ class Usuario:
 
     Etapa 2: nome, email e data_cadastro são expostos via @property.
     A senha nunca é exposta - apenas verificada internamente.
+
+    Etapa 4: a senha não fica mais em texto puro na memória. O construtor
+    guarda só o hash (PBKDF2-HMAC-SHA256) e um salt aleatório por usuário —
+    é esse par que `banco.py` persiste no SQLite, nunca a senha original.
     """
 
     # ---- Atributos de Classe ------------------------------------------
@@ -18,14 +24,18 @@ class Usuario:
     __ultimo_id: int = 0
 
     # ---- Construtor ----------------------------------------------------
-    def __init__(self, nome: str, email: str, senha: str) -> None:
+    def __init__(self, nome: str, email: str, senha: str, *, data_cadastro: str = None) -> None:
         """
         Inicializa um novo usuário e incrementa o contador global.
 
         Args:
             nome    (str): Nome completo do usuário.
             email   (str): E-mail de login.
-            senha   (str): Senha de acesso (mínimo 6 caracteres).
+            senha   (str): Senha de acesso em texto puro (mínimo 6 caracteres) —
+                           só existe até a linha seguinte, onde vira hash.
+            data_cadastro (str): Só usado por `Usuario.reconstruir()`, ao
+                           recarregar um usuário do banco (mantém a data
+                           original em vez de gerar uma nova).
         """
 
         # As properties abaixo já validam nome e email — se algum for
@@ -36,12 +46,13 @@ class Usuario:
 
         if len(senha) < 6:
             raise ValueError("Erro: a senha deve ter ao menos 6 caracteres.")
-        self.__senha: str = senha
+        self.__salt: bytes = os.urandom(16)
+        self.__hash_senha: str = Usuario.__gerar_hash(senha, self.__salt)
 
         Usuario.__total_usuarios += 1
         Usuario.__ultimo_id += 1
         self.__id: int = Usuario.__ultimo_id
-        self.__data_cadastro: str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        self.__data_cadastro: str = data_cadastro or datetime.now().strftime("%d/%m/%Y %H:%M")
 
         # ---- Composição com Conta (Etapa 3) --------------------------
         # Fecha a lacuna deixada na Etapa 2: um usuário possui N contas.
@@ -116,9 +127,15 @@ class Usuario:
         return sum(conta.saldo for conta in self.__contas)
 
     # ---- Senha: sem getter, só verificação e troca controlada --------------
+    @staticmethod
+    def __gerar_hash(senha: str, salt: bytes) -> str:
+        """PBKDF2-HMAC-SHA256 com 100 mil iterações — lento de propósito,
+        para dificultar força bruta caso o banco vaze."""
+        return hashlib.pbkdf2_hmac("sha256", senha.encode("utf-8"), salt, 100_000).hex()
+
     def verificar_senha(self, senha: str) -> bool:
         """Retorna True se a senha fornecida confere com a armazenada."""
-        return self.__senha == senha
+        return Usuario.__gerar_hash(senha, self.__salt) == self.__hash_senha
 
     def set_senha(self, senha_atual: str, nova_senha: str) -> None:
         """
@@ -131,8 +148,35 @@ class Usuario:
             raise ValueError("Erro: senha atual incorreta.")
         if len(nova_senha) < 6:
             raise ValueError("Erro: a nova senha deve ter ao menos 6 caracteres.")
-        self.__senha = nova_senha
+        self.__salt = os.urandom(16)
+        self.__hash_senha = Usuario.__gerar_hash(nova_senha, self.__salt)
         print("Senha alterada com sucesso.")
+
+    @property
+    def credenciais(self) -> tuple:
+        """
+        (hash da senha, salt) em hexadecimal — a senha original nunca sai
+        daqui. Existe só para `banco.py` persistir e reidratar o login;
+        nenhum outro módulo deveria precisar disto.
+        """
+        return self.__hash_senha, self.__salt.hex()
+
+    @classmethod
+    def reconstruir(cls, nome: str, email: str, hash_senha: str,
+                     salt_hex: str, data_cadastro: str) -> "Usuario":
+        """
+        Recria um usuário a partir de dados já persistidos no banco.
+
+        Não recebe senha em texto puro — ela nunca chega a ser salva, só o
+        hash. Por isso passa uma senha descartável só para satisfazer a
+        validação de tamanho mínimo do construtor, e em seguida sobrescreve
+        o hash e o salt pelos valores vindos do SQLite. Usado exclusivamente
+        por `banco.autenticar()`.
+        """
+        usuario = cls(nome, email, "senha-descartavel", data_cadastro=data_cadastro)
+        usuario.__hash_senha = hash_senha
+        usuario.__salt = bytes.fromhex(salt_hex)
+        return usuario
 
     @classmethod
     def get_total_usuarios(cls) -> int:

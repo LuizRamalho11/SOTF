@@ -71,6 +71,21 @@ class SistemaFinanceiro:
         conta.registrar(transacao)                                  # histórico
         self.__indice.inserir(transacao.categoria.nome, transacao)  # tabela hash
 
+    def reidratar_transacao(self, transacao: Transacao, conta: Conta) -> None:
+        """
+        Mesmos dois últimos passos de `registrar_transacao`, mas SEM aplicar
+        o efeito financeiro (`transacao.aplicar(conta)`).
+
+        Usada só por `banco.carregar_estado()`: a conta carregada do banco já
+        nasce com o saldo final salvo, então reaplicar a transação por cima
+        duplicaria o valor.
+        """
+        if conta not in self.__usuario.contas:
+            raise ValueError("A conta não pertence ao usuário deste sistema.")
+
+        conta.registrar(transacao)
+        self.__indice.inserir(transacao.categoria.nome, transacao)
+
     def buscar_por_categoria(self, nome_categoria: str) -> list:
         """Transações de uma categoria em O(1) médio, via tabela hash."""
         return self.__indice.buscar(nome_categoria)

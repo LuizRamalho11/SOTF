@@ -4,12 +4,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import streamlit as st
 
+import banco
 from categoria import Categoria
 from conta import ContaCorrente, ContaPoupanca
 from relatorio import ExportadorCSV, ExportadorInterface, ExportadorPDF, NoPeriodo, Relatorio
 from sistema import SistemaFinanceiro
 from transacao import TransacaoDespesa, TransacaoReceita
-from usuario import Usuario
 
 matplotlib.use("Agg")   # backend sem janela — o Streamlit só quer a imagem
 
@@ -41,12 +41,30 @@ def moeda(valor: float) -> str:
 # O Streamlit re-executa este arquivo inteiro a cada clique. Sem guardar os
 # objetos em session_state, todo usuário/conta/transação seria recriado do zero
 # a cada interação — e os contadores de classe ficariam malucos.
+if "conexao" not in st.session_state:
+    st.session_state.conexao = banco.conectar()
 if "sistema" not in st.session_state:
     st.session_state.sistema = None
+if "usuario_id_db" not in st.session_state:
+    # None enquanto ninguém logou, ou durante o "modo demonstração" (que
+    # nunca é salvo). Só vira um id de verdade após login/cadastro.
+    st.session_state.usuario_id_db = None
 
 
 def sistema_atual() -> SistemaFinanceiro:
     return st.session_state.sistema
+
+
+def persistir() -> None:
+    """
+    Salva o estado atual no SQLite — chamada logo após cada operação que
+    muda os dados (abrir conta, registrar transação/categoria).
+
+    Não faz nada em modo demonstração (`usuario_id_db is None`): os dados de
+    exemplo existem só para a apresentação, não fazem sentido persistidos.
+    """
+    if st.session_state.usuario_id_db is not None:
+        banco.salvar_estado(st.session_state.conexao, st.session_state.usuario_id_db, sistema_atual())
 
 
 # ---- Barra lateral -------------------------------------------------------------
@@ -60,34 +78,67 @@ with st.sidebar:
     if sistema_atual() is None:
         st.subheader("Comece por aqui")
 
-        if st.button("🎬 Carregar dados de exemplo", use_container_width=True, type="primary"):
+        if st.button("🎬 Carregar dados de exemplo", use_container_width=True,
+                     help="Modo demonstração — não fica salvo no banco."):
             st.session_state.sistema = SistemaFinanceiro.carregar_exemplo()
+            st.session_state.usuario_id_db = None
             st.rerun()
 
-        st.caption("ou crie um usuário do zero:")
-        with st.form("form_usuario"):
-            nome = st.text_input("Nome", placeholder="Camila Ferreira")
-            email = st.text_input("E-mail", placeholder="camila@email.com")
-            senha = st.text_input("Senha", type="password", help="Mínimo de 6 caracteres")
+        st.divider()
 
-            if st.form_submit_button("Criar usuário", use_container_width=True):
-                try:
-                    st.session_state.sistema = SistemaFinanceiro(Usuario(nome, email, senha))
-                    st.rerun()
-                except ValueError as erro:
-                    # As validações das properties (Etapa 2) chegam até aqui.
-                    st.error(str(erro))
+        aba_entrar, aba_criar = st.tabs(["Entrar", "Criar conta"])
+
+        with aba_entrar:
+            with st.form("form_login"):
+                email_login = st.text_input("E-mail", key="email_login")
+                senha_login = st.text_input("Senha", type="password", key="senha_login")
+
+                if st.form_submit_button("Entrar", use_container_width=True, type="primary"):
+                    resultado = banco.autenticar(st.session_state.conexao, email_login, senha_login)
+                    if resultado is None:
+                        st.error("E-mail ou senha incorretos.")
+                    else:
+                        usuario_id_db, usuario = resultado
+                        st.session_state.usuario_id_db = usuario_id_db
+                        st.session_state.sistema = banco.carregar_estado(
+                            st.session_state.conexao, usuario_id_db, usuario)
+                        st.rerun()
+
+        with aba_criar:
+            with st.form("form_cadastro"):
+                nome_novo = st.text_input("Nome", placeholder="Camila Ferreira")
+                email_novo = st.text_input("E-mail", placeholder="camila@email.com")
+                senha_novo = st.text_input("Senha", type="password",
+                                           help="Mínimo de 6 caracteres")
+
+                if st.form_submit_button("Criar conta", use_container_width=True, type="primary"):
+                    try:
+                        usuario_id_db, usuario = banco.cadastrar(
+                            st.session_state.conexao, nome_novo, email_novo, senha_novo)
+                        st.session_state.usuario_id_db = usuario_id_db
+                        st.session_state.sistema = SistemaFinanceiro(usuario)
+                        st.rerun()
+                    except ValueError as erro:
+                        # Validações das properties (Etapa 2) e e-mail duplicado
+                        # (banco.cadastrar) chegam até aqui.
+                        st.error(str(erro))
     else:
         sistema = sistema_atual()
+        em_modo_demonstracao = st.session_state.usuario_id_db is None
+
         st.subheader(f"👤 {sistema.usuario.nome}")
         st.caption(sistema.usuario.email)
+        if em_modo_demonstracao:
+            st.caption("🎬 Modo demonstração — nada é salvo.")
         st.metric("Patrimônio total", moeda(sistema.usuario.patrimonio_total()))
         st.caption(f"{len(sistema.contas)} conta(s) · {len(sistema.transacoes)} transação(ões)")
 
-        if st.button("🔄 Reiniciar sistema", use_container_width=True):
+        rotulo_saida = "🔄 Reiniciar demonstração" if em_modo_demonstracao else "🚪 Sair"
+        if st.button(rotulo_saida, use_container_width=True):
             # Limpa a sessão INTEIRA, não só o sistema: widgets com key guardam
             # objetos (categorias, contas) do sistema antigo, e eles ficariam
-            # apontando para algo que não existe mais.
+            # apontando para algo que não existe mais. Os dados de um usuário
+            # de verdade continuam salvos no banco — só a sessão é esvaziada.
             st.session_state.clear()
             st.rerun()
 
@@ -159,6 +210,7 @@ with aba_contas:
                     else:
                         nova = ContaPoupanca(saldo_inicial=saldo_inicial)
                     sistema.abrir_conta(nova)
+                    persistir()
                     st.rerun()
                 except ValueError as erro:
                     st.error(str(erro))
@@ -213,6 +265,7 @@ with aba_transacoes:
                         # O sistema aplica, registra no histórico e indexa na hash.
                         sistema.registrar_transacao(classe(valor, descricao, categoria),
                                                     conta_escolhida)
+                        persistir()
                         st.rerun()
                     except ValueError as erro:
                         # Ex.: saque acima do saldo+limite é barrado pela regra
@@ -412,6 +465,7 @@ with aba_categorias:
                     sistema.registrar_categoria(
                         Categoria(nome_categoria, cor_categoria, icone_categoria),
                         pai_escolhido)
+                    persistir()
                     st.rerun()
                 except ValueError as erro:
                     st.error(str(erro))

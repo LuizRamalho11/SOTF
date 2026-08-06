@@ -1,0 +1,66 @@
+
+Regras para os projetos 
+(sob pena de diminuição de nota)
+
+Cada grupo deverá ter no máximo 3 componentes e as apresentações durarão no máximo 5 minutos por componente. Apresentações individuais também serão bem vindas. 
+O projeto será apresentado em datas definidas no SIGAA. Os apresentadores não devem levar "cola" para ler durante a apresentação ou ler slides excessivamente;
+ Toda a turma deverá estar presente no dia da apresentação do começo até o fim da aula. Todos os componentes do grupo devem falar durante o mesmo intervalo de tempo na apresentação;
+O arquivo-fonte do programa deverá ser mostrado durante a apresentação e executado no seu interpretador preferido;
+Todos os códigos dos grupos deverão ter pelo menos 50 linhas de código por componente (caso módulos/ framework não apresentadas em sala de aula sejam usadas, este número pode ser reduzido para 30, salvo exceções acordadas com a professora) e usar os assuntos dados em aula correspondentes a cada etapa:
+Primeira etapa: Classes e objetos, encapsulamento com atributos e métodos privados e somente os métodos get e set públicos, atributos de classe e de instância, construtores e destrures, diagrama de classes. O tema deve ser informado no grupo do whats da disciplina até dois dias antes da apresentação, sob pena de diminuição de nota.
+Segunda etapa: Métodos e variáveis de instância, encapsulamento com properties, diagrama de classes atualizado, herança, polimorfismo,  interfaces e SOLID. O tema deve ser informado no grupo do whats da disciplina até dois dias antes da apresentação, sob pena de diminuição de nota.
+Terceira etapa: Diagrama de classes atualizado, recursão, tabelas hash, grafos, pesquisa em largura, Streamlit, revisão de SOLID no código  alterado. O tema deve ser informado no grupo do whats da disciplina até dois dias antes da apresentação, sob pena de diminuição de nota.
+O tema do projeto deve ser decidido pelos membros do grupo.  Mesmo assim, é interessante que os grupos procurem a professora para receber feedbacks sobre o projeto. Caso o grupo não procure a professora antes da apresentação para informar o tema, os feedbacks serão dados na hora da apresentação, sob pena de diminuição de nota;
+A descrição dos erros apresentados em formato de diário de bordo no projeto durante a fase de implementação deve ser feita no momento da apresentação. Caso tenha usado Inteligência Artificial Generativa (Ex. chat GPT), informar como foi feito;
+O grupo deverá realizar a apresentação com o auxílio de um editor de slides. Basicamente, a sequência da apresentação é a seguinte:
+Uma explicação inicial do tema do projeto, onde as fórmulas ou teoria usadas e seus parâmetros serão apresentados;
+Mostrar como a teoria foi implementada no programa e explicar os comandos usados. Caso seja um framework/ módulo/ biblioteca novo a ser apresentado, dê dicas de onde aprender este assunto;
+Apresentar os erros ao longo da implementação do projeto e como eles foram resolvidos (diário de bordo em um slide);
+Mostrar o programa funcionando com todas as suas opções.
+A reposição consistirá na apresentação de um programa em Python nos moldes do que foi requisitado na etapa em que a avaliação não foi realizada, sendo que sua execução é obrigatoriamente individual;
+As datas de todas as apresentações e reposições estão definidas no SIGAA;
+A apresentação em formato PDF deve ser submetida no SIGAA e ao Google Drive da disciplina no diretório PROJETOS usando o padrão: etapaX-<nome-produto>.pdf, onde X é o número da etapa na data determinada e nome-produto é o nome do produto que está sendo implementado em seu projeto.
+Segue um exemplo de requisitos para a etapa 1:
+
+CASO BASE 1 — Camila, a estudante multitarefas
+🎯 Contexto
+Camila Ferreira tem 20 anos e está no 3º período do curso de Psicologia. Sua rotina é intensa e, muitas vezes, caótica. Ela estagia em uma clínica pela manhã, tem aulas à tarde e, à noite, participa de um grupo de pesquisa sobre saúde mental de adolescentes. Além disso, Camila faz academia três vezes por semana, precisa cuidar da casa, manter o contato com a família e ainda encontrar tempo para si mesma.
+Apesar de ser uma pessoa organizada e preocupada com seu desempenho acadêmico, Camila tem sentido que está perdendo o controle da própria rotina. Ela tenta usar cadernos, aplicativos de notas e agendas online, mas nenhum deles parece funcionar como ela gostaria. Frequentemente esquece prazos de trabalhos, chega atrasada em reuniões e tem dificuldade de priorizar o que é mais urgente. Isso tem gerado ansiedade, insônia e a sensação de que está sempre devendo algo — a alguém ou a si mesma.
+Camila quer encontrar uma forma de visualizar melhor sua rotina e gerenciar seu tempo de maneira mais leve e eficaz. Para isso, precisa de uma ferramenta que converse com sua realidade e seus objetivos, e não de mais um aplicativo genérico que vai parar no esquecimento depois de duas semanas.
+Se continuar assim, Camila teme comprometer seu estágio e sua saúde mental. Ela precisa de uma solução sob medida, e precisa agora.
+👩 💼 Persona: Camila Ferreira
+Curso: Psicologia | Idade: 20 anos | Semestre: 3º Estilo de vida: Estudante, estagiária, pesquisadora e pessoa comum tentando conciliar tudo Objetivo pessoal: Ter mais equilíbrio entre obrigações e bem-estar Habilidades técnicas: Básicas — usa celular, aplicativos simples e redes sociais
+🧠 Mapa da Empatia
+O que pensa e sente?
+● Pensa constantemente em como está perdendo tempo tentando se organizar e não conseguindo.
+● Sente culpa por não entregar trabalhos no prazo e frustração por não conseguir manter uma rotina saudável.
+● Quer usar ferramentas que realmente funcionem e se adaptem ao seu ritmo e à sua realidade.
+● Sente-se sobrecarregada e às vezes até incapaz de manter tudo funcionando.
+O que ouve?
+● Professores falando da importância da disciplina, do autocuidado e do planejamento.
+● Amigos recomendando aplicativos como Trello, Google Agenda, Notion — mas que são confusos para ela ou exigem tempo para configurar.
+● Da família, ouve preocupações e conselhos para "diminuir o ritmo" — algo que ela considera inviável no momento.
+O que vê?
+● Colegas usando ferramentas visivelmente engessadas ou genéricas.
+● Aplicativos que prometem produtividade, mas cheios de funcionalidades que ela não entende ou não usa.
+● Vídeos na internet de como ser mais produtiva, mas que parecem mais distantes do que aplicáveis.
+O que fala e faz?
+● Reclama que precisa de algo feito “sob medida” para a sua rotina.
+● Comenta que “não dá conta de tudo” e que “o dia deveria ter 30 horas”.
+● Costuma tentar organizar a semana todo domingo à noite, mas logo se perde no volume de atividades.
+Quais são suas dores?
+● Perde prazos importantes por falta de controle visual.
+● Se sente ansiosa e desmotivada por viver correndo atrás do tempo.
+● Gasta tempo e energia tentando se reorganizar a cada semana.
+Quais são seus ganhos?
+● Ter uma rotina equilibrada e clara.
+● Saber, de forma visual e simples, o que tem para fazer em cada dia.
+● Sentir que está no controle de sua vida.
+● Ter uma ferramenta que funcione como um verdadeiro aliado no dia a dia, sem precisar se adaptar a ela.
+🧩 Tarefa
+Você foi convidado a desenvolver uma solução para ajudar Camila a ter uma rotina mais leve, organizada e funcional.
+Seu desafio é criar uma ferramenta que permita a ela visualizar e gerenciar suas atividades diárias de forma personalizada, levando em conta seus compromissos, prioridades e estilo de vida.
+O projeto deve obrigatoriamente ser desenvolvido utilizando classes, objetos e variáveis de instância.
+Caso deseje, você pode ir além e incluir funcionalidades extras, como formas de prever sobrecarga futura, gerar relatórios semanais ou oferecer pequenas recomendações automáticas — mas isso é totalmente opcional.
+O mais importante é que sua solução dialogue com a realidade de Camila e ofereça a ela clareza, leveza e confiança.
+
